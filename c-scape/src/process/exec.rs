@@ -1,3 +1,4 @@
+use crate::rustix_runtime;
 use rustix::fd::BorrowedFd;
 use rustix::fs::AtFlags;
 use rustix::mm::{mmap_anonymous, MapFlags, ProtFlags};
@@ -78,7 +79,7 @@ unsafe extern "C" fn execve(
 ) -> c_int {
     libc!(libc::execve(prog, argv, envp));
 
-    let err = rustix::runtime::execve(
+    let err = rustix_runtime::execve(
         CStr::from_ptr(prog),
         argv as *const *const _,
         envp as *const *const _,
@@ -108,7 +109,7 @@ unsafe extern "C" fn execvpe(
     let file = CStr::from_ptr(file);
     let file_bytes = file.to_bytes();
     if file_bytes.contains(&b'/') {
-        let err = rustix::runtime::execve(file, argv.cast(), envp.cast());
+        let err = rustix_runtime::execve(file, argv.cast(), envp.cast());
         set_errno(Errno(err.raw_os_error()));
         return -1;
     }
@@ -166,7 +167,7 @@ unsafe extern "C" fn execvpe(
         let slice = slice::from_raw_parts(buffer, dir.len() + 1 + file_bytes.len() + 1);
 
         // Run it! If this succeeds, it doesn't return.
-        let error = rustix::runtime::execve(
+        let error = rustix_runtime::execve(
             CStr::from_bytes_with_nul(slice).unwrap(),
             argv.cast(),
             envp.cast(),
@@ -198,7 +199,7 @@ unsafe extern "C" fn fexecve(
 ) -> c_int {
     libc!(libc::fexecve(fd, argv, envp));
 
-    let mut error = rustix::runtime::execveat(
+    let mut error = rustix_runtime::execveat(
         BorrowedFd::borrow_raw(fd),
         c"",
         argv as *const *const _,
@@ -218,7 +219,7 @@ unsafe extern "C" fn fexecve(
         let fd_bytes = fd_dec.as_c_str().to_bytes_with_nul();
         buf[PREFIX_LEN..PREFIX_LEN + fd_bytes.len()].copy_from_slice(fd_bytes);
 
-        error = rustix::runtime::execve(
+        error = rustix_runtime::execve(
             CStr::from_bytes_with_nul_unchecked(&buf),
             argv.cast(),
             envp.cast(),

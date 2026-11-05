@@ -1,11 +1,12 @@
 use crate::convert_res;
+use crate::rustix_runtime;
 use core::mem::{size_of, size_of_val, transmute, zeroed};
 use core::ptr::{addr_of, addr_of_mut, copy_nonoverlapping};
 use errno::{set_errno, Errno};
 use libc::*;
 use origin::signal::{Sigaction, SigactionFlags};
 use rustix::process::Signal;
-use rustix::runtime::{How, KernelSigSet, Siginfo, Stack, KERNEL_SIGRTMAX, KERNEL_SIGRTMIN};
+use rustix_runtime::{How, KernelSigSet, Siginfo, Stack, KERNEL_SIGRTMAX, KERNEL_SIGRTMIN};
 
 #[no_mangle]
 unsafe extern "C" fn signal(signal: c_int, handler: sighandler_t) -> sighandler_t {
@@ -128,7 +129,7 @@ unsafe extern "C" fn sigprocmask(how: c_int, set: *const sigset_t, oldset: *mut 
         Some(&*set.cast::<KernelSigSet>())
     };
 
-    match convert_res(rustix::runtime::kernel_sigprocmask(how, set)) {
+    match convert_res(rustix_runtime::kernel_sigprocmask(how, set)) {
         Some(mut old) => {
             if !oldset.is_null() {
                 // Clear out the signals reserved for libc.
@@ -148,7 +149,7 @@ unsafe extern "C" fn sigprocmask(how: c_int, set: *const sigset_t, oldset: *mut 
 unsafe extern "C" fn sigpending(set: *mut sigset_t) -> c_int {
     libc!(libc::sigpending(set));
 
-    let pending = rustix::runtime::kernel_sigpending();
+    let pending = rustix_runtime::kernel_sigpending();
     set.write(crate::expand_sigset(pending));
     0
 }
@@ -157,7 +158,7 @@ unsafe extern "C" fn sigpending(set: *mut sigset_t) -> c_int {
 unsafe extern "C" fn sigsuspend(set: *const sigset_t) -> c_int {
     libc!(libc::sigsuspend(set));
 
-    match convert_res(rustix::runtime::kernel_sigsuspend(&*set.cast())) {
+    match convert_res(rustix_runtime::kernel_sigsuspend(&*set.cast())) {
         Some(()) => 0,
         None => -1,
     }
@@ -176,7 +177,7 @@ unsafe extern "C" fn sigaltstack(new: *const stack_t, old: *mut stack_t) -> c_in
         Some(new.read())
     };
 
-    match convert_res(rustix::runtime::kernel_sigaltstack(new)) {
+    match convert_res(rustix_runtime::kernel_sigaltstack(new)) {
         Some(old_stack) => {
             if !old.is_null() {
                 old.write(old_stack);
@@ -200,7 +201,7 @@ unsafe extern "C" fn raise(sig: c_int) -> c_int {
     // thread could exit and its thread id could get reused by another thread.
     // But in this case, we're sending the signal to ourself, so we know we
     // haven't exited.
-    match convert_res(rustix::runtime::tkill(tid, sig)) {
+    match convert_res(rustix_runtime::tkill(tid, sig)) {
         Some(()) => 0,
         None => -1,
     }
@@ -215,7 +216,7 @@ unsafe extern "C" fn abort() -> ! {
     // The `abort` function is documented to kill the current thread with an
     // abort signal. As in `raise`, `tkill` is dangerous in general, but safe
     // here.
-    rustix::runtime::tkill(tid, Signal::ABORT).ok();
+    rustix_runtime::tkill(tid, Signal::ABORT).ok();
 
     // That ought to work, but there's a possibility that the application has
     // a handler for the abort signal and that the handler returns.
@@ -224,7 +225,7 @@ unsafe extern "C" fn abort() -> ! {
     // `Signal::Abort`, but doing that reliably requires taking a lock and
     // coordinating with various other things, so for now just switch to
     // a higher-powered way to terminate the process.
-    rustix::runtime::tkill(tid, Signal::KILL).ok();
+    rustix_runtime::tkill(tid, Signal::KILL).ok();
 
     // That *really* should have worked. But if we're somehow still running,
     // abruptly exit the program.
@@ -318,7 +319,7 @@ unsafe extern "C" fn sigismember(sigset: *const sigset_t, signum: c_int) -> c_in
 unsafe extern "C" fn sigwait(set: *const sigset_t, sig: *mut c_int) -> c_int {
     libc!(libc::sigwait(set, sig));
 
-    match rustix::runtime::kernel_sigwait(&*set.cast()) {
+    match rustix_runtime::kernel_sigwait(&*set.cast()) {
         Ok(signum) => {
             sig.write(signum.as_raw());
             0
@@ -333,7 +334,7 @@ unsafe extern "C" fn sigwaitinfo(set: *const sigset_t, info: *mut siginfo_t) -> 
 
     let info: *mut Siginfo = checked_cast!(info);
 
-    match convert_res(rustix::runtime::kernel_sigwaitinfo(&*set.cast())) {
+    match convert_res(rustix_runtime::kernel_sigwaitinfo(&*set.cast())) {
         Some(info_value) => {
             if !info.is_null() {
                 info.write(info_value);
@@ -363,7 +364,7 @@ unsafe extern "C" fn sigtimedwait(
 
     let info: *mut Siginfo = checked_cast!(info);
 
-    match convert_res(rustix::runtime::kernel_sigtimedwait(
+    match convert_res(rustix_runtime::kernel_sigtimedwait(
         &*set.cast(),
         timeout.as_ref(),
     )) {

@@ -21,6 +21,8 @@ compile_error!("Enable one \"coexist-with-libc\" and \"take-charge\".");
 
 extern crate alloc;
 
+use rustix::runtime_448b8ad740e2a26f as rustix_runtime;
+
 // Re-export the libc crate's API. This allows users to depend on the c-scape
 // crate in place of libc.
 pub use libc::*;
@@ -181,7 +183,7 @@ static GLOBAL_ALLOCATOR: rustix_dlmalloc::GlobalDlmalloc = rustix_dlmalloc::Glob
 
 /// Convert a `KernelSigSet` into a `libc::sigset_t`.
 #[cfg(feature = "take-charge")]
-pub(crate) fn expand_sigset(set: rustix::runtime::KernelSigSet) -> libc::sigset_t {
+pub(crate) fn expand_sigset(set: rustix_runtime::KernelSigSet) -> libc::sigset_t {
     let mut lc = core::mem::MaybeUninit::<libc::sigset_t>::uninit();
     unsafe {
         // First create an empty `sigset_t`.
@@ -190,7 +192,7 @@ pub(crate) fn expand_sigset(set: rustix::runtime::KernelSigSet) -> libc::sigset_
         // Then write a `KernelSigSet` into the beginning of it. It's
         // guaranteed to have a subset of the layout.
         lc.as_mut_ptr()
-            .cast::<rustix::runtime::KernelSigSet>()
+            .cast::<rustix_runtime::KernelSigSet>()
             .write(set);
         lc.assume_init()
     }
