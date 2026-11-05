@@ -113,7 +113,6 @@ unsafe extern "C" fn dirname(path: *mut c_char) -> *mut c_char {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_dirname_basename() {
