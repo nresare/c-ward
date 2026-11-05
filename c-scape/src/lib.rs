@@ -2,10 +2,7 @@
 // c-scape does not use std; features that depend on std are in c-gull instead.
 #![no_std]
 // Nightly Rust features that we depend on.
-#![feature(thread_local)] // for `pthread_getspecific` etc.
-#![feature(c_variadic)] // for `printf`, `ioctl`, etc.
 #![feature(sync_unsafe_cell)] // for lots of libc static variables
-#![feature(linkage)] // for `malloc` etc.
 // Disable some common warnings.
 #![allow(unexpected_cfgs)]
 // Don't warn if `try_into()` is fallible on some targets.
