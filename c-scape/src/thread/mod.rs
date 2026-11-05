@@ -4,6 +4,7 @@ mod once;
 mod rwlock;
 mod spinlock;
 
+use crate::rustix_runtime;
 use alloc::boxed::Box;
 use alloc::format;
 use core::ffi::c_void;
@@ -12,7 +13,7 @@ use core::ptr::{self, copy_nonoverlapping, null_mut, NonNull};
 use core::slice;
 use origin::thread::{self, Thread};
 use rustix::fs::{Mode, OFlags};
-use rustix::runtime::KernelSigSet;
+use rustix_runtime::KernelSigSet;
 
 use libc::{c_char, c_int, size_t};
 
@@ -334,9 +335,9 @@ unsafe extern "C" fn pthread_sigmask(
     libc!(libc::pthread_sigmask(how, set, oldset));
 
     let how = match how {
-        libc::SIG_BLOCK => rustix::runtime::How::BLOCK,
-        libc::SIG_UNBLOCK => rustix::runtime::How::UNBLOCK,
-        libc::SIG_SETMASK => rustix::runtime::How::SETMASK,
+        libc::SIG_BLOCK => rustix_runtime::How::BLOCK,
+        libc::SIG_UNBLOCK => rustix_runtime::How::UNBLOCK,
+        libc::SIG_SETMASK => rustix_runtime::How::SETMASK,
         _ => return libc::EINVAL,
     };
 
@@ -350,7 +351,7 @@ unsafe extern "C" fn pthread_sigmask(
         Some(&*set.cast::<KernelSigSet>())
     };
 
-    match rustix::runtime::kernel_sigprocmask(how, set) {
+    match rustix_runtime::kernel_sigprocmask(how, set) {
         Ok(old) => {
             if !oldset.is_null() {
                 oldset.write(crate::expand_sigset(old));

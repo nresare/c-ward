@@ -6,10 +6,11 @@
 //! call them from C code that links to c-scape via its C ABI. All of the
 //! magic is hidden in inside `naked_asm` blocks.
 
+use crate::rustix_runtime;
 use core::arch::naked_asm;
 use core::mem::size_of;
 use libc::{c_int, c_void};
-use rustix::runtime::{How, KernelSigSet};
+use rustix_runtime::{How, KernelSigSet};
 
 #[allow(non_camel_case_types)]
 type jmp_buf = *mut c_void;
@@ -457,7 +458,7 @@ unsafe extern "C" fn __sigsetjmp_save(env: sigjmp_buf, savesigs: c_int) -> sigjm
         let set = &mut *env
             .byte_add(SIG_OFFSET + size_of::<usize>())
             .cast::<KernelSigSet>();
-        *set = rustix::runtime::kernel_sigprocmask(How::SETMASK, None).unwrap();
+        *set = rustix_runtime::kernel_sigprocmask(How::SETMASK, None).unwrap();
     }
 
     // Return the `env` value so that the assembly code doesn't have to save
@@ -477,7 +478,7 @@ unsafe extern "C" fn siglongjmp(env: sigjmp_buf, val: c_int) -> ! {
         let set = &*env
             .byte_add(SIG_OFFSET + size_of::<usize>())
             .cast::<KernelSigSet>();
-        rustix::runtime::kernel_sigprocmask(How::SETMASK, Some(set)).ok();
+        rustix_runtime::kernel_sigprocmask(How::SETMASK, Some(set)).ok();
     }
 
     // Call `longjmp` to do the actual jump.

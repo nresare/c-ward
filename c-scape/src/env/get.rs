@@ -1,5 +1,6 @@
 //! Environment variable handling.
 
+use crate::rustix_runtime;
 use core::ptr::null_mut;
 use core::slice;
 use libc::{c_char, c_int};
@@ -19,7 +20,7 @@ unsafe extern "C" fn getenv(key: *const c_char) -> *mut c_char {
 unsafe extern "C" fn secure_getenv(key: *const c_char) -> *mut c_char {
     //libc!(libc::secure_getenv(key));
 
-    if rustix::runtime::linux_secure() {
+    if rustix_runtime::linux_secure() {
         return null_mut();
     }
 

@@ -1,4 +1,5 @@
 use crate::convert_res;
+use crate::rustix_runtime;
 use core::ptr::{null_mut, without_provenance_mut};
 use errno::{set_errno, Errno};
 use libc::{c_int, c_void, intptr_t};
@@ -9,7 +10,7 @@ static mut CURRENT: *mut c_void = null_mut();
 unsafe extern "C" fn brk(ptr: *mut c_void) -> c_int {
     libc!(libc::brk(ptr));
 
-    let new = match convert_res(rustix::runtime::kernel_brk(ptr)) {
+    let new = match convert_res(rustix_runtime::kernel_brk(ptr)) {
         Some(new) => new,
         None => return -1,
     };
@@ -33,7 +34,7 @@ unsafe extern "C" fn sbrk(increment: intptr_t) -> *mut c_void {
 
     if old.is_null() {
         // Read the current value from the OS.
-        old = match convert_res(rustix::runtime::kernel_brk(null_mut())) {
+        old = match convert_res(rustix_runtime::kernel_brk(null_mut())) {
             Some(old) => old,
             None => return without_provenance_mut(!0),
         };
@@ -61,7 +62,7 @@ unsafe extern "C" fn sbrk(increment: intptr_t) -> *mut c_void {
     }
 
     // Install the new address.
-    let new = match convert_res(rustix::runtime::kernel_brk(want)) {
+    let new = match convert_res(rustix_runtime::kernel_brk(want)) {
         Some(new) => new,
         None => {
             CURRENT = old;

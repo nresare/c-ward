@@ -1,4 +1,5 @@
 use crate::convert_res;
+use crate::rustix_runtime;
 use core::ffi::CStr;
 use core::mem::{size_of, zeroed};
 use core::ptr::{addr_of, null_mut};
@@ -178,7 +179,7 @@ unsafe extern "C" fn dl_iterate_phdr(
 
     libc!(libc::dl_iterate_phdr(callback, data));
 
-    let (phdr, _phent, phnum) = rustix::runtime::exe_phdrs();
+    let (phdr, _phent, phnum) = rustix_runtime::exe_phdrs();
     let mut info = libc::dl_phdr_info {
         dlpi_addr: addr_of!(__executable_start).expose_provenance() as _,
         dlpi_name: c"/proc/self/exe".as_ptr(),
