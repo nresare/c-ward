@@ -62,7 +62,8 @@ libc = "0.2.155"
 static_assertions = "1.1.0"
 
 [features]
-default = ["thread", "std", "coexist-with-libc", "threadsafe-setenv"]
+# Provide the runtime when c-scape is linked into std for Linux without libc.
+default = ["eyra", "threadsafe-setenv", "rustc-dep-of-std", "experimental-relocate"]
 thread = ["origin/unstable-errno"]
 std = ["rustix/std"]
 
@@ -123,6 +124,7 @@ rustc-dep-of-std = [
     "dep:core",
     "dep:alloc",
     "rustix/rustc-dep-of-std",
+    "origin/rustc-dep-of-std",
 ]
 
 # Enable `todo!()` stubs for not-yet-implemented functions.
